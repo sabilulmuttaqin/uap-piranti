@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Automatic Watering System</title>
+    <script>
+      // Fungsi untuk mendapatkan nilai kelembapan tanah
+      function updateMoisture() {
+        fetch("http://192.168.244.26/moisture") // Sesuaikan dengan alamat IP ESP32
+          .then((response) => response.text())
+          .then((data) => {
+            document.getElementById("moisture").innerText = data + "%";
+          })
+          .catch((error) => {
+            console.error("Error fetching moisture data:", error);
+            document.getElementById("moisture").innerText = "Error";
+          });
+      }
+
+      // Fungsi untuk menghidupkan atau mematikan pompa
+      function togglePump(action) {
+        const url = action === "on" ? "/pump/on" : "/pump/off";
+        fetch("http://192.168.244.26" + url) // Sesuaikan dengan alamat IP ESP32
+          .then((response) => response.text())
+          .then((data) => {
+            alert(data); // Menampilkan status pompa
+            updatePumpStatus();
+          })
+          .catch((error) => {
+            console.error("Error toggling pump:", error);
+            alert("Failed to toggle pump. Check connection.");
+          });
+      }
+
+      // Fungsi untuk mendapatkan status pompa
+      function updatePumpStatus() {
+        fetch("http://192.168.244.26/pump/status") // Sesuaikan dengan alamat IP ESP32
+          .then((response) => response.text())
+          .then((status) => {
+            document.getElementById("pumpStatus").innerText =
+              "Pump is " + status;
+          })
+          .catch((error) => {
+            console.error("Error fetching pump status:", error);
+            document.getElementById("pumpStatus").innerText = "Error";
+          });
+      }
+
+      // Panggil fungsi ini setiap beberapa detik
+      setInterval(updateMoisture, 2000);
+      setInterval(updatePumpStatus, 2000);
+    </script>
+  </head>
+  <body>
+    <h1>Automatic Watering System</h1>
+
+    <h2>Soil Moisture</h2>
+    <p id="moisture">Loading...</p>
+
+    <h2>Control Pump</h2>
+    <button onclick="togglePump('on')">Turn Pump ON</button>
+    <button onclick="togglePump('off')">Turn Pump OFF</button>
+    <p id="pumpStatus">Pump is Loading...</p>
+  </body>
+</html>
