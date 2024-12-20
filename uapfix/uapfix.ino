@@ -1,74 +1,68 @@
 #include <WiFi.h>
-#include <HTTPClient.h>
+#include <ESPAsyncWebServer.h>
 
-const int soilMoisturePin = 35;  // Pin untuk membaca soil moisture sensor (analog)
-const int pumpPin = 4;           // Pin untuk mengendalikan relay pompa (digital)
+// Konfigurasi WiFi
+const char* ssid = "Hy";
+const char* password = "00000000";
 
-int moistureValue = 0;           // Variabel untuk menyimpan nilai kelembapan tanah
-bool pumpStatus = false;         // Variabel untuk menyimpan status pompa
+// Variabel untuk sensor kelembapan tanah
+int moisture = 0;
 
-// Pengaturan jaringan WiFi
-const char* ssid = "sabilul";
-const char* password = "sabilulesp";
-
-// Server URL di Laragon
-const String serverUrl = "http://localhost:3000";
+// Deklarasi server
+AsyncWebServer server(80);
 
 void setup() {
-  Serial.begin(115200);     // Memulai komunikasi serial
-  pinMode(pumpPin, OUTPUT);
-  WiFi.begin(ssid, password);
+    // Memulai Serial Monitor
+    Serial.begin(115200);
 
-  // Menunggu koneksi WiFi
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(1000);
-    Serial.println("Connecting to WiFi...");
-  }
+    // Menghubungkan ke WiFi
+    WiFi.begin(ssid, password);
+    while (WiFi.status() != WL_CONNECTED) {
+        delay(1000);
+        Serial.println("Connecting to WiFi...");
+    }
+    Serial.println("Connected to WiFi");
+    Serial.println(WiFi.localIP());
 
-  Serial.println("Connected to WiFi");
-  Serial.print("IP Address: ");
-  Serial.println(WiFi.localIP());
+    // Endpoint untuk kelembapan tanah
+    server.on("/moisture", HTTP_GET, [](AsyncWebServerRequest *request){
+        AsyncWebServerResponse *response = request->beginResponse(200, "text/plain", String(moisture) + "%");
+        response->addHeader("Access-Control-Allow-Origin", "*");
+        request->send(response);
+    });
+
+    // Endpoint untuk menghidupkan pompa
+    server.on("/pump/on", HTTP_GET, [](AsyncWebServerRequest *request){
+        // Logika menghidupkan pompa
+        digitalWrite(2, HIGH); // Sesuaikan dengan pin pompa
+        AsyncWebServerResponse *response = request->beginResponse(200, "text/plain", "Pump is ON");
+        response->addHeader("Access-Control-Allow-Origin", "*");
+        request->send(response);
+    });
+
+    // Endpoint untuk mematikan pompa
+    server.on("/pump/off", HTTP_GET, [](AsyncWebServerRequest *request){
+        // Logika mematikan pompa
+        digitalWrite(2, LOW); // Sesuaikan dengan pin pompa
+        AsyncWebServerResponse *response = request->beginResponse(200, "text/plain", "Pump is OFF");
+        response->addHeader("Access-Control-Allow-Origin", "*");
+        request->send(response);
+    });
+
+    // Endpoint untuk status pompa
+    server.on("/pump/status", HTTP_GET, [](AsyncWebServerRequest *request){
+        String status = digitalRead(2) == HIGH ? "ON" : "OFF"; // Membaca status pin pompa
+        AsyncWebServerResponse *response = request->beginResponse(200, "text/plain", "Pump is " + status);
+        response->addHeader("Access-Control-Allow-Origin", "*");
+        request->send(response);
+    });
+
+    // Memulai server
+    server.begin();
 }
 
 void loop() {
-  // Membaca nilai kelembapan tanah
-  moistureValue = analogRead(soilMoisturePin);
-
-  // Menampilkan nilai kelembapan di Serial Monitor
-  Serial.print("Soil Moisture Value (Raw): ");
-  Serial.println(moistureValue);
-
-  int moisturePercentage = map(moistureValue, 0, 4095, 0, 100);
-  Serial.print("Soil Moisture Percentage: ");
-  Serial.print(moisturePercentage);
-  Serial.println("%");
-
-  // Kontrol otomatis pompa berdasarkan nilai kelembapan
-  if (moistureValue < 1500) {
-    digitalWrite(pumpPin, HIGH);
-    pumpStatus = true;
-    Serial.println("Pump Status: ON (Auto)");
-  } else {
-    digitalWrite(pumpPin, LOW);
-    pumpStatus = false;
-    Serial.println("Pump Status: OFF (Auto)");
-  }
-
-  // Mengirimkan status kelembapan ke server
-  HTTPClient http;
-  http.begin(serverUrl + "/moisture");
-  http.addHeader("Content-Type", "application/json");
-
-  int httpCode = http.GET();
-  if (httpCode == 200) {
-    String payload = http.getString();
-    Serial.println("Soil Moisture from Server: " + payload);
-  } else {
-    Serial.println("Failed to connect to server");
-  }
-
-  http.end();
-
-  // Menunggu beberapa detik sebelum pembacaan berikutnya
-  delay(2000);
+    // Membaca data sensor kelembapan
+    moisture = analogRead(A0); // Sesuaikan dengan pin sensor
+    delay(1000); // Menunggu 1 detik sebelum membaca lagi
 }
