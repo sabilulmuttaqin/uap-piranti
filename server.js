@@ -16,9 +16,8 @@ let autoMode = true;
 
 // Endpoint untuk root
 app.get("/", (req, res) => {
-  res.send("Server is running! Use /moisture, /pump/on, or /pump/off");
+  res.sendFile(path.join(__dirname, "server.html"));
 });
-
 // Endpoint untuk mendapatkan data kelembapan tanah
 app.get("/moisture", (req, res) => {
   // Data simulasi kelembapan tanah (dapat dihubungkan dengan ESP32 melalui API sebenarnya)
