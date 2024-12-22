@@ -6,11 +6,25 @@
     <title>Automatic Watering System</title>
     <script>
       // Fungsi untuk mendapatkan nilai kelembapan tanah
+
+      // Fungsi untuk mendapatkan nilai kelembapan tanah
       function updateMoisture() {
-        fetch("http://192.168.244.26/moisture") // Sesuaikan dengan alamat IP ESP32
-          .then((response) => response.text())
+        fetch("http://192.168.254.26/moisture") // Sesuaikan dengan alamat IP ESP32
+          .then((response) => {
+            if (!response.ok) {
+              throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.text();
+          })
           .then((data) => {
-            document.getElementById("moisture").innerText = data + "%";
+            // Validasi apakah data adalah angka
+            const moistureValue = parseInt(data, 10);
+            if (!isNaN(moistureValue)) {
+              document.getElementById("moisture").innerText =
+                moistureValue + "%";
+            } else {
+              document.getElementById("moisture").innerText = "Invalid Data";
+            }
           })
           .catch((error) => {
             console.error("Error fetching moisture data:", error);
@@ -21,7 +35,7 @@
       // Fungsi untuk menghidupkan atau mematikan pompa
       function togglePump(action) {
         const url = action === "on" ? "/pump/on" : "/pump/off";
-        fetch("http://192.168.244.26" + url) // Sesuaikan dengan alamat IP ESP32
+        fetch("http://192.168.254.26" + url) // Sesuaikan dengan alamat IP ESP32
           .then((response) => response.text())
           .then((data) => {
             alert(data); // Menampilkan status pompa
@@ -35,7 +49,7 @@
 
       // Fungsi untuk mendapatkan status pompa
       function updatePumpStatus() {
-        fetch("http://192.168.244.26/pump/status") // Sesuaikan dengan alamat IP ESP32
+        fetch("http://192.168.254.26/pump/status") // Sesuaikan dengan alamat IP ESP32
           .then((response) => response.text())
           .then((status) => {
             document.getElementById("pumpStatus").innerText =
@@ -46,6 +60,38 @@
             document.getElementById("pumpStatus").innerText = "Error";
           });
       }
+
+      // Fungsi untuk mengatur mode auto/manual
+      function toggleAutoMode(action) {
+        const url = action === "on" ? "/pump/auto/on" : "/pump/auto/off";
+        fetch("http://192.168.254.26" + url) // Sesuaikan dengan alamat IP ESP32
+          .then((response) => response.text())
+          .then((data) => {
+            alert(data); // Menampilkan status mode auto/manual
+            updateAutoModeStatus();
+          })
+          .catch((error) => {
+            console.error("Error toggling auto mode:", error);
+            alert("Failed to toggle auto mode. Check connection.");
+          });
+      }
+
+      // Fungsi untuk mendapatkan status mode auto/manual
+      function updateAutoModeStatus() {
+        fetch("http://192.168.254.26/pump/auto/status") // Sesuaikan dengan alamat IP ESP32
+          .then((response) => response.text())
+          .then((mode) => {
+            document.getElementById("autoModeStatus").innerText =
+              "Mode: " + mode;
+          })
+          .catch((error) => {
+            console.error("Error fetching auto mode status:", error);
+            document.getElementById("autoModeStatus").innerText = "Error";
+          });
+      }
+
+      // Panggil fungsi ini setiap beberapa detik
+      setInterval(updateAutoModeStatus, 2000);
 
       // Panggil fungsi ini setiap beberapa detik
       setInterval(updateMoisture, 2000);
@@ -62,5 +108,10 @@
     <button onclick="togglePump('on')">Turn Pump ON</button>
     <button onclick="togglePump('off')">Turn Pump OFF</button>
     <p id="pumpStatus">Pump is Loading...</p>
+
+    <h2>Control Mode</h2>
+    <button onclick="toggleAutoMode('on')">Set Auto Mode ON</button>
+    <button onclick="toggleAutoMode('off')">Set Auto Mode OFF</button>
+    <p id="autoModeStatus">Mode: Loading...</p>
   </body>
 </html>
